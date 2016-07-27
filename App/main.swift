@@ -1,6 +1,7 @@
 import Vapor
 import VaporMustache
 import VaporTurnstile
+import VaporMySQL
 import Turnstile
 
 /**
@@ -15,7 +16,9 @@ let mustache = VaporMustache.Provider(withIncludes: [
     "footer": "Includes/footer.mustache"
 ])
 
-let turnstile = VaporTurnstile(realms: [DummyRealm()])
+let mysql = try VaporMySQL.Provider(host: "host", user: "username", password: "password", database: "database")
+
+let turnstile = VaporTurnstile(realms: [DatabaseRealm()])
 
 /**
     Xcode defaults to a working directory in
@@ -45,7 +48,7 @@ let workDir: String?
     or `drop.client()` to create a client for
     request data from other servers.
 */
-let drop = Droplet(workDir: workDir, providers: [mustache, turnstile])
+let drop = Droplet(workDir: workDir, preparations: [User.self], providers: [mustache, turnstile, mysql])
 
 /**
     This first route will return the welcome.html
@@ -86,6 +89,19 @@ drop.post("/login") { request in
 
 drop.get("/register") { request in
     return try drop.view("register.mustache")
+}
+
+drop.post("/register") { request in
+    do {
+        let loginRequest = try LoginRequest(request: request)
+        // Attempt to login, or error
+        
+        try request.subject.register(credentials: UsernamePasswordCredentials(username: loginRequest.email.value, password: loginRequest.password.value))
+        
+        return Response(redirect: "/")
+    } catch let error as ValidationErrorProtocol {
+        return try drop.view("register.mustache", context: ["flash": error.message])
+    }
 }
 
 drop.post("/logout") { request in
