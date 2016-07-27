@@ -15,7 +15,7 @@ let mustache = VaporMustache.Provider(withIncludes: [
     "footer": "Includes/footer.mustache"
 ])
 
-let turnstile = VaporTurnstile()
+let turnstile = VaporTurnstile(realms: [DummyRealm()])
 
 /**
     Xcode defaults to a working directory in
@@ -58,7 +58,11 @@ let drop = Droplet(workDir: workDir, providers: [mustache, turnstile])
     --workDir to the application upon execution.
 */
 drop.get("/") { request in
-    return try drop.view("index.mustache")
+    guard request.subject.authentiated else {
+        return try drop.view("index.mustache")
+    }
+    
+    return try drop.view("dashboard.mustache", context: ["authenticated": true])
 }
 
 drop.get("/login") { request in
@@ -66,16 +70,13 @@ drop.get("/login") { request in
 }
 
 drop.post("/login") { request in
-    request.session?["test"] = "hi"
-    let session = request.session
-    print(session.debugDescription)
     do {
         let loginRequest = try LoginRequest(request: request)
         // Attempt to login, or error
         
         try request.subject.login(credentials: UsernamePasswordCredentials(username: loginRequest.email.value, password: loginRequest.password.value))
 
-        return loginRequest.email.value
+        return Response(redirect: "/")
     } catch let error as ValidationErrorProtocol {
         return try drop.view("login.mustache", context: ["flash": error.message])
     } catch let error as IncorrectCredentialsError {
@@ -85,6 +86,11 @@ drop.post("/login") { request in
 
 drop.get("/register") { request in
     return try drop.view("register.mustache")
+}
+
+drop.post("/logout") { request in
+    request.subject.logout()
+    return Response(redirect: "/")
 }
 
 // Print what link to visit for default port

@@ -9,11 +9,15 @@
     <div class="header clearfix">
       <nav>
         <ul class="nav nav-pills pull-right">
-          <li role="presentation"><a href="/">Home</a></li>
-          <li role="presentation"><a href="/dashboard">Dashboard</a></li>
+          {{^authenticated}}
+          <li role="presentation"><a href="/login">Log In</a></li>
+          {{/authenticated}}
+          {{#authenticated}}
+          <li role="presentation"><a href="javascript:;" onclick="var f=document.createElement('form');f.method='POST';f.action='/logout';f.submit();">Logout</a></li>
+          {{/authenticated}}
         </ul>
       </nav>
-      <h3 class="text-muted">VaporAuth</h3>
+      <h3 class="text-muted"><a href="/">VaporAuth</a></h3>
     </div>
     {{#flash}}
     <div class="alert alert-danger" role="alert">
