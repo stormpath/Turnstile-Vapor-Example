@@ -15,4 +15,8 @@ class Note: Model {
         self.userId = userId
         self.note = note
     }
+    
+    static func forUser(id: Value) -> Fluent.Query<Note> {
+        return self.filter("userId", id)
+    }
 }

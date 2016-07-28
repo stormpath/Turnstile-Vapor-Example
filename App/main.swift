@@ -77,7 +77,7 @@ drop.post("/login") { request in
         let loginRequest = try LoginRequest(request: request)
         // Attempt to login, or error
         
-        try request.subject.login(credentials: PasswordCredentials(username: loginRequest.email.value, password: loginRequest.password.value))
+        try request.subject.login(credentials: PasswordCredentials(username: loginRequest.email.value, password: loginRequest.password.value), persist: true)
 
         return Response(redirect: "/")
     } catch let error as ValidationErrorProtocol {
@@ -111,9 +111,9 @@ drop.post("/logout") { request in
     return Response(redirect: "/")
 }
 
-drop.grouped(AuthenticationRequiredMiddleware()) { group in
+drop.grouped(CookieAuthenticationRequired()) { group in
     group.get("/notes") { request in
-        var notes = try Query<Note>().filter("userId", (request.subject.authDetails?.account.accountID)!).all()
+        var notes = try Note.forUser(id: (request.user?.id)!).all()
         
         let notesContext = notes.map({ (note) -> [String: String] in
             let id = (note.id?.string)!
@@ -138,7 +138,7 @@ drop.grouped(AuthenticationRequiredMiddleware()) { group in
     }
     
     group.get("/notes/:id") { request in
-        guard let note = try Query<Note>().filter("userId", (request.subject.authDetails?.account.accountID)!).filter("id", request.parameters["id"]!).first() else {
+        guard let note = try Note.forUser(id: (request.user?.id)!).filter("id", request.parameters["id"]!).first() else {
             return "404"
         }
         
@@ -149,7 +149,7 @@ drop.grouped(AuthenticationRequiredMiddleware()) { group in
     group.post("/notes/:id") { request in
         let saveNotesRequest = try SaveNoteRequest(request: request)
         
-        guard let querriedNote = try Query<Note>().filter("userId", (request.subject.authDetails?.account.accountID)!).filter("id", request.parameters["id"]!).first() else {
+        guard let querriedNote = try Note.forUser(id: (request.user?.id)!).filter("id", request.parameters["id"]!).first() else {
             return "404"
         }
         var note = querriedNote
@@ -162,7 +162,18 @@ drop.grouped(AuthenticationRequiredMiddleware()) { group in
     }
 }
 
-
+drop.grouped(APIKeyAuthenticationRequired()) { group in
+    group.get("/api/notes") { request in
+        var notes = try Note.forUser(id: (request.user?.id)!).all()
+        
+        let notesArray = notes.map({ (note) -> JSON in
+            let id = (note.id?.int)!
+            let text = note.note
+            return JSON(["id": id, "note": text])
+        })
+        return JSON(notesArray)
+    }
+}
 
 // Print what link to visit for default port
 drop.serve()
