@@ -61,7 +61,7 @@ let drop = Droplet(workDir: workDir, preparations: [User.self, Note.self], provi
     --workDir to the application upon execution.
 */
 drop.get("/") { request in
-    if request.subject.authentiated {
+    if request.subject.authenticated {
         return Response(redirect: "/notes")
     } else {
         return try drop.view("index.mustache")
@@ -77,7 +77,7 @@ drop.post("/login") { request in
         let loginRequest = try LoginRequest(request: request)
         // Attempt to login, or error
         
-        try request.subject.login(credentials: UsernamePasswordCredentials(username: loginRequest.email.value, password: loginRequest.password.value))
+        try request.subject.login(credentials: PasswordCredentials(username: loginRequest.email.value, password: loginRequest.password.value))
 
         return Response(redirect: "/")
     } catch let error as ValidationErrorProtocol {
@@ -94,7 +94,7 @@ drop.get("/register") { request in
 drop.post("/register") { request in
     do {
         let loginRequest = try LoginRequest(request: request)
-        let credentials = UsernamePasswordCredentials(username: loginRequest.email.value, password: loginRequest.password.value)
+        let credentials = PasswordCredentials(username: loginRequest.email.value, password: loginRequest.password.value)
         // Attempt to login, or error
         
         try request.subject.register(credentials: credentials)

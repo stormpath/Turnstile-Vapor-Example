@@ -16,7 +16,7 @@ final class User: Model, Account {
         passwordHash = serialized["passwordHash"]?.string ?? ""
     }
     
-    init(credentials: UsernamePasswordCredentials) {
+    init(credentials: PasswordCredentials) {
         self.username = credentials.username
         self.passwordHash = drop.hash.make(credentials.password)
     }
@@ -25,7 +25,7 @@ final class User: Model, Account {
 class DatabaseRealm: Realm {
     func authenticate(credentials: Credentials) throws -> Account {
         // TODO: Insecure -- just prototyping
-        guard let credentials = credentials as? UsernamePasswordCredentials else { throw IncorrectCredentialsError() }
+        guard let credentials = credentials as? PasswordCredentials else { throw IncorrectCredentialsError() }
         guard let match = try Query<User>().filter("username", credentials.username).first() else { throw IncorrectCredentialsError() }
         
         if match.passwordHash == drop.hash.make(credentials.password) {
@@ -36,7 +36,7 @@ class DatabaseRealm: Realm {
         
     }
     func register(credentials: Credentials) throws -> Account {
-        guard let credentials = credentials as? UsernamePasswordCredentials else { throw IncorrectCredentialsError() }
+        guard let credentials = credentials as? PasswordCredentials else { throw IncorrectCredentialsError() }
         var user = User(credentials: credentials)
         try user.save()
         let databasestuff = Database.map
@@ -44,7 +44,7 @@ class DatabaseRealm: Realm {
         return user
     }
     func supports(credentials: Credentials) -> Bool {
-        return credentials is UsernamePasswordCredentials
+        return credentials is PasswordCredentials
     }
 }
 

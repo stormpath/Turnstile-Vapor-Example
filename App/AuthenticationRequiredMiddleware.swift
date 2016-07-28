@@ -10,7 +10,7 @@ import Vapor
 
 class AuthenticationRequiredMiddleware: Middleware {
     func respond(to request: Request, chainingTo next: Responder) throws -> Response {
-        if request.subject.authentiated {
+        if request.subject.authenticated {
             return try next.respond(to: request)
         } else {
             return Response(redirect: "/")
