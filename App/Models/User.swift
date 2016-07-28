@@ -23,6 +23,9 @@ final class User: Model, Account {
 }
 
 class DatabaseRealm: Realm {
+    func canAuthenticate(credentialType: Credentials.Type) -> Bool {
+        return credentialType is PasswordCredentials.Type
+    }
     func authenticate(credentials: Credentials) throws -> Account {
         // TODO: Insecure -- just prototyping
         guard let credentials = credentials as? PasswordCredentials else { throw IncorrectCredentialsError() }
@@ -35,6 +38,10 @@ class DatabaseRealm: Realm {
         }
         
     }
+    
+    func canRegister(credentialType: Credentials.Type) -> Bool {
+        return credentialType is PasswordCredentials.Type
+    }
     func register(credentials: Credentials) throws -> Account {
         guard let credentials = credentials as? PasswordCredentials else { throw IncorrectCredentialsError() }
         var user = User(credentials: credentials)
@@ -42,9 +49,6 @@ class DatabaseRealm: Realm {
         let databasestuff = Database.map
         print(databasestuff)
         return user
-    }
-    func supports(credentials: Credentials) -> Bool {
-        return credentials is PasswordCredentials
     }
 }
 

@@ -113,7 +113,7 @@ drop.post("/logout") { request in
 
 drop.grouped(AuthenticationRequiredMiddleware()) { group in
     group.get("/notes") { request in
-        var notes = try Query<Note>().filter("userId", (request.subject.account?.accountID)!).all()
+        var notes = try Query<Note>().filter("userId", (request.subject.authDetails?.account.accountID)!).all()
         
         let notesContext = notes.map({ (note) -> [String: String] in
             let id = (note.id?.string)!
@@ -129,7 +129,7 @@ drop.grouped(AuthenticationRequiredMiddleware()) { group in
     
     group.post("/notes/new") { request in
         let saveNotesRequest = try SaveNoteRequest(request: request)
-        let userId = Int((request.subject.account?.accountID)!)!
+        let userId = Int((request.subject.authDetails?.account.accountID)!)!
         var note = Note(userId: userId, note: saveNotesRequest.note)
         try note.save()
         
@@ -138,7 +138,7 @@ drop.grouped(AuthenticationRequiredMiddleware()) { group in
     }
     
     group.get("/notes/:id") { request in
-        guard let note = try Query<Note>().filter("userId", (request.subject.account?.accountID)!).filter("id", request.parameters["id"]!).first() else {
+        guard let note = try Query<Note>().filter("userId", (request.subject.authDetails?.account.accountID)!).filter("id", request.parameters["id"]!).first() else {
             return "404"
         }
         
@@ -149,7 +149,7 @@ drop.grouped(AuthenticationRequiredMiddleware()) { group in
     group.post("/notes/:id") { request in
         let saveNotesRequest = try SaveNoteRequest(request: request)
         
-        guard let querriedNote = try Query<Note>().filter("userId", (request.subject.account?.accountID)!).filter("id", request.parameters["id"]!).first() else {
+        guard let querriedNote = try Query<Note>().filter("userId", (request.subject.authDetails?.account.accountID)!).filter("id", request.parameters["id"]!).first() else {
             return "404"
         }
         var note = querriedNote
