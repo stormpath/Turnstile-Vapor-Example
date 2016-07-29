@@ -5,13 +5,14 @@ import Foundation
 
 final class User: Model, Account {
     var id: Value?
-    var accountID: String? {
-        return id?.string
+    var accountID: String {
+        return id.string ?? ""
     }
     var username: String
     var passwordHash: String
     var apiKeyID: String
     var apiKeySecret: String
+    var facebookID: String
     
     init(serialized: [String: Value]) {
         // Should figure out the optional Model initializer?
@@ -19,6 +20,7 @@ final class User: Model, Account {
         passwordHash = serialized["passwordHash"]?.string ?? ""
         apiKeyID = serialized["apiKeyID"]?.string ?? ""
         apiKeySecret = serialized["apiKeySecret"]?.string ?? ""
+        facebookID = serialized["facebookID"]?.string ?? ""
     }
     
     init(credentials: PasswordCredentials) {
@@ -26,30 +28,61 @@ final class User: Model, Account {
         self.passwordHash = drop.hash.make(credentials.password)
         self.apiKeyID = String(arc4random_uniform(1000000))
         self.apiKeySecret = String(arc4random_uniform(1000000))
+        self.facebookID = ""
+    }
+    
+    init(credentials: FacebookAccount) {
+        self.username = credentials.accountID
+        self.passwordHash = ""
+        self.apiKeyID = String(arc4random_uniform(1000000))
+        self.apiKeySecret = String(arc4random_uniform(1000000))
+        self.facebookID = credentials.accountID
     }
 }
 
 class DatabaseRealm: Realm {
     func canAuthenticate(credentialType: Credentials.Type) -> Bool {
-        return credentialType is PasswordCredentials.Type || credentialType is APIKeyCredentials.Type
+        return credentialType is PasswordCredentials.Type || credentialType is APIKeyCredentials.Type || credentialType is FacebookAccount.Type
     }
+    
     func authenticate(credentials: Credentials) throws -> Account {
-        // TODO: Insecure -- just prototyping
         switch credentials {
         case let credentials as PasswordCredentials:
-            guard let match = try User.filter("username", credentials.username).first() else { throw IncorrectCredentialsError() }
-            
-            if match.passwordHash == drop.hash.make(credentials.password) {
-                return match
-            } else {
-                throw IncorrectCredentialsError()
-            }
+            return try authenticate(credentials: credentials)
         case let credentials as APIKeyCredentials:
-            guard let match = try User.filter("apiKeyID", credentials.id).filter("apiKeySecret", credentials.secret).first() else {
-                throw IncorrectCredentialsError()
-            }
-            return match
+            return try authenticate(credentials: credentials)
+        case let credentials as FacebookAccount:
+            return try authenticate(credentials: credentials)
         default:
+            throw UnsupportedCredentialsError()
+        }
+    }
+    
+    func authenticate(credentials: PasswordCredentials) throws -> Account {
+        guard let match = try User.filter("username", credentials.username).first() else { throw IncorrectCredentialsError() }
+        
+        if match.passwordHash == drop.hash.make(credentials.password) {
+            return match
+        } else {
+            throw IncorrectCredentialsError()
+        }
+    }
+    
+    func authenticate(credentials: APIKeyCredentials) throws -> Account {
+        guard let match = try User.filter("apiKeyID", credentials.id).filter("apiKeySecret", credentials.secret).first() else {
+            throw IncorrectCredentialsError()
+        }
+        return match
+    }
+    
+    func authenticate(credentials: FacebookAccount) throws -> Account {
+        guard let match = try User.filter("facebookID", credentials.accountID).first() else {
+            throw IncorrectCredentialsError()
+        }
+        
+        if match.facebookID == credentials.accountID {
+            return match
+        } else {
             throw IncorrectCredentialsError()
         }
     }
@@ -57,8 +90,12 @@ class DatabaseRealm: Realm {
     func canRegister(credentialType: Credentials.Type) -> Bool {
         return credentialType is PasswordCredentials.Type
     }
+    
     func register(credentials: Credentials) throws -> Account {
-        guard let credentials = credentials as? PasswordCredentials else { throw IncorrectCredentialsError() }
+        throw UnsupportedCredentialsError()
+    }
+    
+    func register(credentials: PasswordCredentials) throws -> Account {
         var user = User(credentials: credentials)
         try user.save()
         return user
