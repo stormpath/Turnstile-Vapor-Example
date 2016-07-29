@@ -18,7 +18,7 @@ let mustache = VaporMustache.Provider(withIncludes: [
 
 let mysql = try VaporMySQL.Provider(host: "host", user: "username", password: "password", database: "database")
 
-let turnstile = VaporTurnstile(realms: [DatabaseRealm()])
+let turnstile = TurnstileProvider(realms: [DatabaseRealm()])
 
 /**
     Xcode defaults to a working directory in
