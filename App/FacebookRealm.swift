@@ -18,10 +18,6 @@ class FacebookRealm: Realm {
         return clientID + "%7C" + clientSecret
     }
     
-    func canAuthenticate(credentialType: Credentials.Type) -> Bool {
-        return credentialType is TokenCredentials.Type || credentialType is AuthorizationCode.Type
-    }
-    
     func authenticate(credentials: Credentials) throws -> Account {
         switch credentials {
         case let credentials as TokenCredentials:
@@ -59,10 +55,6 @@ class FacebookRealm: Realm {
                 throw UnsupportedCredentialsError()
         }
         return try authenticate(credentials: TokenCredentials(token: accessToken))
-    }
-    
-    func canRegister(credentialType: Credentials.Type) -> Bool {
-        return false
     }
     
     func register(credentials: Credentials) throws -> Account {

@@ -16,6 +16,8 @@ let mustache = VaporMustache.Provider(withIncludes: [
     "footer": "Includes/footer.mustache"
 ])
 
+let facebook = FacebookRealm(clientID: "clientID", clientSecret: "clientSecret")
+
 let mysql = try VaporMySQL.Provider(host: "host", user: "username", password: "password", database: "database")
 
 let turnstile = TurnstileProvider(realms: [DatabaseRealm()])
