@@ -178,7 +178,7 @@ drop.grouped(APIKeyAuthenticationRequired()) { group in
 }
 
 drop.get("/login/facebook/authorize") { request in
-    return Response(redirect: "https://www.facebook.com/dialog/oauth?client_id=1734765303425366&redirect_uri=http://localhost:8080/login/facebook/callback")
+    return Response(redirect: facebook.authorizationURI)
 }
 
 drop.get("/login/facebook/callback") { request in
