@@ -44,16 +44,16 @@ class DatabaseRealm: Realm {
         guard let match = try User.filter("facebookID", credentials.accountID).first() else {
             throw IncorrectCredentialsError()
         }
-        
-        if match.facebookID == credentials.accountID {
-            return match
-        } else {
-            throw IncorrectCredentialsError()
-        }
+        return match
     }
     
     func register(credentials: Credentials) throws -> Account {
-        throw UnsupportedCredentialsError()
+        switch credentials {
+        case let credentials as PasswordCredentials:
+            return try register(credentials: credentials)
+        default:
+            throw UnsupportedCredentialsError()
+        }
     }
     
     func register(credentials: PasswordCredentials) throws -> Account {

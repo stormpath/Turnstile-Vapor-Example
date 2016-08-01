@@ -100,7 +100,7 @@ drop.post("/register") { request in
         // Attempt to login, or error
         
         try request.subject.register(credentials: credentials)
-        try request.subject.login(credentials: credentials)
+        try request.subject.login(credentials: credentials, persist: true)
         
         return Response(redirect: "/")
     } catch let error as ValidationErrorProtocol {
