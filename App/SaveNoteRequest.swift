@@ -13,8 +13,7 @@ class SaveNoteRequest {
     let note: String
     
     init(request: Request) throws {
-        // Need to figure out a better way to pin to formurlencoded
-        if let id = request.data["id"]?.int {
+        if let id = request.formURLEncoded?["id"]?.int {
             self.id = Int(id)
         } else {
             self.id = nil
