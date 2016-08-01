@@ -7,6 +7,7 @@
 //
 
 import Turnstile
+import VaporTurnstile
 
 class DatabaseRealm: Realm {
     func authenticate(credentials: Credentials) throws -> Account {

@@ -16,11 +16,11 @@ let mustache = VaporMustache.Provider(withIncludes: [
     "footer": "Includes/footer.mustache"
 ])
 
-let facebook = FacebookRealm(clientID: "clientID", clientSecret: "clientSecret")
+let facebook = FacebookRealm(clientID: "clientID", clientSecret: "clientSecret", callbackURI: "callbackURI")
 
 let mysql = try VaporMySQL.Provider(host: "host", user: "username", password: "password", database: "database")
 
-let turnstile = TurnstileProvider(realms: [DatabaseRealm()])
+let turnstile = TurnstileProvider(realm: DatabaseRealm())
 
 /**
     Xcode defaults to a working directory in
@@ -182,11 +182,10 @@ drop.get("/login/facebook/authorize") { request in
 }
 
 drop.get("/login/facebook/callback") { request in
-    guard let code = request.query?["code"]?.string else { return "Error" }
-    let account = try facebook.authenticate(credentials: AuthorizationCode(code: code, redirectURI: "http://localhost:8080/login/facebook/callback"))
+    let credentials = try facebook.authenticate(request: request)
     
     do {
-        try request.subject.login(credentials: account, persist: true)
+        try request.subject.login(credentials: credentials, persist: true)
         return Response(redirect: "/")
     }
     catch let error as IncorrectCredentialsError {

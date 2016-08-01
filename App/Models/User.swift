@@ -2,6 +2,7 @@
 import Turnstile
 import Fluent
 import Foundation
+import VaporTurnstile
 
 final class User: Model, Account {
     var id: Value?
