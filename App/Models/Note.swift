@@ -8,7 +8,7 @@ class Note: Model {
     var note: String
     
     required init(node: Node, in context: Context) throws {
-        userId = try node.extract("userId")
+        userId = try node.extract("user_id")
         note = try node.extract("note")
     }
     
@@ -20,7 +20,7 @@ class Note: Model {
     func makeNode() throws -> Node {
         return try Node(node: [
             "id": id,
-            "userId": userId,
+            "user_id": userId,
             "note": note
         ])
     }
@@ -28,7 +28,7 @@ class Note: Model {
     static func prepare(_ database: Database) throws {
         try database.create("notes") { notes in
             notes.id()
-            notes.int("userId")
+            notes.int("user_id")
             notes.string("note")
         }
     }
@@ -38,6 +38,6 @@ class Note: Model {
     }
     
     static func forUser(id: Node) throws -> Fluent.Query<Note> {
-        return try self.query().filter("userId", id)
+        return try self.query().filter("user_id", id)
     }
 }
