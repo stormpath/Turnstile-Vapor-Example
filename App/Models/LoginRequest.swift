@@ -1,4 +1,5 @@
 import Vapor
+import HTTP
 
 class LoginRequest {
     let email: Valid<Email>

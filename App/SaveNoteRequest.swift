@@ -7,6 +7,7 @@
 //
 
 import Vapor
+import HTTP
 
 class SaveNoteRequest {
     let id: Int?

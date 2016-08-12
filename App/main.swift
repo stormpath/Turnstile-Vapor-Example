@@ -3,6 +3,8 @@ import VaporMustache
 import VaporTurnstile
 import VaporMySQL
 import Turnstile
+import HTTP
+import TurnstileWeb
 
 /**
     Adding a provider allows it to boot
@@ -23,34 +25,13 @@ let mysql = try VaporMySQL.Provider(host: "host", user: "username", password: "p
 let turnstile = TurnstileProvider(realm: DatabaseRealm())
 
 /**
-    Xcode defaults to a working directory in
-    a temporary build folder. 
-    
-    In order for Vapor to access Resources and
-    Configuration files, the working directory
-    must be the root directory of your project.
- 
-    This can also be achieved by passing
-    --workDir=$(SRCROOT) in the Xcode arguments
-    or setting the root directory manually in:
-    Edit Scheme > Options > [ ] Use custom working directory
-*/
-let workDir: String?
-#if Xcode
-    let parent = #file.characters.split(separator: "/").map(String.init).dropLast().joined(separator: "/")
-    workDir = "/\(parent)/.."
-#else
-    workDir = nil
-#endif
-
-/**
     Droplets are service containers that make accessing
     all of Vapor's features easy. Just call
     `drop.serve()` to serve your application
     or `drop.client()` to create a client for
     request data from other servers.
 */
-let drop = Droplet(workDir: workDir, preparations: [User.self, Note.self], providers: [mustache, turnstile, mysql])
+let drop = Droplet(preparations: [User.self, Note.self], initializedProviders: [mustache, turnstile, mysql])
 
 /**
     This first route will return the welcome.html
@@ -63,7 +44,7 @@ let drop = Droplet(workDir: workDir, preparations: [User.self, Note.self], provi
     --workDir to the application upon execution.
 */
 drop.get("/") { request in
-    if request.subject.authenticated {
+    if request.user.authenticated {
         return Response(redirect: "/notes")
     } else {
         return try drop.view("index.mustache")
@@ -79,7 +60,7 @@ drop.post("/login") { request in
         let loginRequest = try LoginRequest(request: request)
         // Attempt to login, or error
         
-        try request.subject.login(credentials: PasswordCredentials(username: loginRequest.email.value, password: loginRequest.password.value), persist: true)
+        try request.user.login(credentials: UsernamePassword(username: loginRequest.email.value, password: loginRequest.password.value), persist: true)
 
         return Response(redirect: "/")
     } catch let error as ValidationErrorProtocol {
@@ -96,11 +77,11 @@ drop.get("/register") { request in
 drop.post("/register") { request in
     do {
         let loginRequest = try LoginRequest(request: request)
-        let credentials = PasswordCredentials(username: loginRequest.email.value, password: loginRequest.password.value)
+        let credentials = UsernamePassword(username: loginRequest.email.value, password: loginRequest.password.value)
         // Attempt to login, or error
         
-        try request.subject.register(credentials: credentials)
-        try request.subject.login(credentials: credentials, persist: true)
+        try request.user.register(credentials: credentials)
+        try request.user.login(credentials: credentials, persist: true)
         
         return Response(redirect: "/")
     } catch let error as ValidationErrorProtocol {
@@ -109,13 +90,13 @@ drop.post("/register") { request in
 }
 
 drop.post("/logout") { request in
-    request.subject.logout()
+    request.user.logout()
     return Response(redirect: "/")
 }
 
-drop.grouped(CookieAuthenticationRequired()) { group in
+drop.group(CookieAuthenticationRequired()) { group in
     group.get("/notes") { request in
-        var notes = try Note.forUser(id: (request.user?.id)!).all()
+        var notes = try Note.forUser(id: (request.account?.id)!).all()
         
         let notesContext = notes.map({ (note) -> [String: String] in
             let id = (note.id?.string)!
@@ -131,7 +112,7 @@ drop.grouped(CookieAuthenticationRequired()) { group in
     
     group.post("/notes/new") { request in
         let saveNotesRequest = try SaveNoteRequest(request: request)
-        let userId = Int((request.subject.authDetails?.account.accountID)!)!
+        let userId = Int((request.user.authDetails?.account.accountID)!)!
         var note = Note(userId: userId, note: saveNotesRequest.note)
         try note.save()
         
@@ -140,7 +121,7 @@ drop.grouped(CookieAuthenticationRequired()) { group in
     }
     
     group.get("/notes/:id") { request in
-        guard let note = try Note.forUser(id: (request.user?.id)!).filter("id", request.parameters["id"]!).first() else {
+        guard let note = try Note.forUser(id: (request.account?.id)!).filter("id", request.parameters["id"]!).first() else {
             return "404"
         }
         
@@ -151,8 +132,8 @@ drop.grouped(CookieAuthenticationRequired()) { group in
     group.post("/notes/:id") { request in
         let saveNotesRequest = try SaveNoteRequest(request: request)
         
-        guard let querriedNote = try Note.forUser(id: (request.user?.id)!).filter("id", request.parameters["id"]!).first() else {
-            return "404"
+        guard let querriedNote = try Note.forUser(id: (request.account?.id)!).filter("id", request.parameters["id"]!).first() else {
+            throw Abort.notFound
         }
         var note = querriedNote
         
@@ -164,28 +145,29 @@ drop.grouped(CookieAuthenticationRequired()) { group in
     }
 }
 
-drop.grouped(APIKeyAuthenticationRequired()) { group in
+drop.group(APIKeyAuthenticationRequired()) { group in
     group.get("/api/notes") { request in
-        var notes = try Note.forUser(id: (request.user?.id)!).all()
+        var notes = try Note.forUser(id: (request.account?.id)!).all()
         
-        let notesArray = notes.map({ (note) -> JSON in
+        let notesArray = try notes.map({ (note) -> JSON in
             let id = (note.id?.int)!
             let text = note.note
-            return JSON(["id": id, "note": text])
+            return try JSON(["id": id, "note": text])
         })
         return JSON(notesArray)
     }
 }
 
 drop.get("/login/facebook/authorize") { request in
-    return Response(redirect: facebook.authorizationURI)
+    return Response(redirect: facebook.getLoginLink(redirectURL: "http://localhost:8080/login/facebook/callback", state: "12345"))
 }
 
 drop.get("/login/facebook/callback") { request in
-    let credentials = try facebook.authenticate(request: request)
+    let token = try facebook.exchange(authorizationCodeCallbackURL: request.uri.string, state: "12345")
+    let credentials = try facebook.authenticate(credentials: token)
     
     do {
-        try request.subject.login(credentials: credentials, persist: true)
+        try request.user.login(credentials: credentials, persist: true)
         return Response(redirect: "/")
     }
     catch let error as IncorrectCredentialsError {

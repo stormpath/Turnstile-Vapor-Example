@@ -1,14 +1,15 @@
+import Vapor
 import Fluent
 
 class Note: Model {
-    var id: Value?
+
+    var id: Node?
     var userId: Int
     var note: String
     
-    required init(serialized: [String: Value]) {
-        // Should figure out the optional Model initializer?
-        userId = (serialized["userId"]?.int) ?? 0
-        note = serialized["note"]?.string ?? ""
+    required init(node: Node, in context: Context) throws {
+        userId = try node.extract("userId")
+        note = try node.extract("note")
     }
     
     init(userId: Int, note: String) {
@@ -16,7 +17,27 @@ class Note: Model {
         self.note = note
     }
     
-    static func forUser(id: Value) -> Fluent.Query<Note> {
-        return self.filter("userId", id)
+    func makeNode() throws -> Node {
+        return try Node(node: [
+            "id": id,
+            "userId": userId,
+            "note": note
+        ])
+    }
+
+    static func prepare(_ database: Database) throws {
+        try database.create("notes") { notes in
+            notes.id()
+            notes.int("userId")
+            notes.string("note")
+        }
+    }
+    
+    static func revert(_ database: Database) throws {
+        try database.delete("users")
+    }
+    
+    static func forUser(id: Node) throws -> Fluent.Query<Note> {
+        return try self.query().filter("userId", id)
     }
 }
