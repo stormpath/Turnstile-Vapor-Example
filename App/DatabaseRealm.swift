@@ -8,6 +8,7 @@
 
 import Turnstile
 import TurnstileWeb
+import TurnstileCrypto
 import VaporTurnstile
 
 class DatabaseRealm: Realm {
@@ -19,6 +20,8 @@ class DatabaseRealm: Realm {
             return try authenticate(credentials: credentials)
         case let credentials as FacebookAccount:
             return try authenticate(credentials: credentials)
+        case let credentials as GoogleAccount:
+            return try authenticate(credentials: credentials)
         default:
             throw UnsupportedCredentialsError()
         }
@@ -27,7 +30,7 @@ class DatabaseRealm: Realm {
     func authenticate(credentials: UsernamePassword) throws -> Account {
         guard let match = try User.query().filter("username", credentials.username).first() else { throw IncorrectCredentialsError() }
         
-        if match.passwordHash == drop.hash.make(credentials.password) {
+        if try! BCrypt.verify(password: credentials.password, matchesHash: match.passwordHash) {
             return match
         } else {
             throw IncorrectCredentialsError()
@@ -43,7 +46,18 @@ class DatabaseRealm: Realm {
     
     func authenticate(credentials: FacebookAccount) throws -> Account {
         guard let match = try User.query().filter("facebook_id", credentials.accountID).first() else {
-            throw IncorrectCredentialsError()
+            var user = User(credentials: credentials)
+            try user.save()
+            return user
+        }
+        return match
+    }
+    
+    func authenticate(credentials: GoogleAccount) throws -> Account {
+        guard let match = try User.query().filter("google_id", credentials.accountID).first() else {
+            var user = User(credentials: credentials)
+            try user.save()
+            return user
         }
         return match
     }

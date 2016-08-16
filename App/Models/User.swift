@@ -4,17 +4,21 @@ import Vapor
 import Fluent
 import Foundation
 import VaporTurnstile
+import TurnstileCrypto
 
 final class User: Model, Account {
+    public var realm: Realm.Type = DatabaseRealm.self
+
     var id: Node?
     var accountID: String {
         return id.string ?? ""
     }
     var username: String
-    var passwordHash: String
+    var passwordHash = ""
     var apiKeyID: String
     var apiKeySecret: String
-    var facebookID: String
+    var facebookID = ""
+    var googleID = ""
     
     required init(node: Node, in context: Context) throws {
         username = try node.extract("username")
@@ -22,6 +26,7 @@ final class User: Model, Account {
         apiKeyID = try node.extract("api_key_id")
         apiKeySecret = try node.extract("api_key_secret")
         facebookID = try node.extract("facebook_id")
+        googleID = try node.extract("google_id")
     }
 
     static func prepare(_ database: Database) throws {
@@ -32,6 +37,7 @@ final class User: Model, Account {
             users.string("api_key_id")
             users.string("api_key_secret")
             users.string("facebook_id")
+            users.string("google_id")
         }
     }
     
@@ -45,23 +51,29 @@ final class User: Model, Account {
             "password_hash": passwordHash,
             "api_key_id": apiKeyID,
             "api_key_secret": apiKeySecret,
-            "facebook_id": facebookID
+            "facebook_id": facebookID,
+            "google_id": googleID
             ])
     }
     
-    init(credentials: UsernamePassword) {
-        self.username = credentials.username
-        self.passwordHash = drop.hash.make(credentials.password)
-        self.apiKeyID = String(arc4random_uniform(1000000))
-        self.apiKeySecret = String(arc4random_uniform(1000000))
-        self.facebookID = ""
+    convenience init(credentials: UsernamePassword) {
+        self.init(username: credentials.username)
+        self.passwordHash = BCrypt.hash(password: credentials.password)
     }
     
-    init(credentials: FacebookAccount) {
-        self.username = credentials.accountID
-        self.passwordHash = ""
+    convenience init(credentials: FacebookAccount) {
+        self.init(username: "\(credentials.dynamicType)\(credentials.accountID)")
+        self.facebookID = credentials.accountID
+    }
+    
+    convenience init(credentials: GoogleAccount) {
+        self.init(username: "\(credentials.dynamicType)\(credentials.accountID)")
+        self.googleID = credentials.accountID
+    }
+    
+    private init(username: String) {
+        self.username = username
         self.apiKeyID = String(arc4random_uniform(1000000))
         self.apiKeySecret = String(arc4random_uniform(1000000))
-        self.facebookID = credentials.accountID
     }
 }

@@ -5,6 +5,7 @@ import VaporMySQL
 import Turnstile
 import HTTP
 import TurnstileWeb
+import TurnstileCrypto
 
 /**
     Adding a provider allows it to boot
@@ -16,9 +17,10 @@ import TurnstileWeb
 let mustache = VaporMustache.Provider(withIncludes: [
     "header": "Includes/header.mustache",
     "footer": "Includes/footer.mustache"
-])
+    ])
 
-let facebook = FacebookRealm(clientID: "clientID", clientSecret: "clientSecret", callbackURI: "callbackURI")
+let facebook = Facebook(clientID: "clientID", clientSecret: "clientSecret")
+let google = Google(clientID: "clientID", clientSecret: "clientSecret")
 
 let mysql = try VaporMySQL.Provider(host: "host", user: "username", password: "password", database: "database")
 
@@ -159,14 +161,37 @@ drop.group(APIKeyAuthenticationRequired()) { group in
 }
 
 drop.get("/login/facebook/authorize") { request in
-    return Response(redirect: facebook.getLoginLink(redirectURL: "http://localhost:8080/login/facebook/callback", state: "12345"))
+    let state = String(URandom().uint64)
+    let response = Response(redirect: facebook.getLoginLink(redirectURL: "http://localhost:8080/login/facebook/callback", state: state))
+    response.cookies["oauth_csrf"] = state
+    return response
 }
 
 drop.get("/login/facebook/callback") { request in
-    let token = try facebook.exchange(authorizationCodeCallbackURL: request.uri.string, state: "12345")
-    let credentials = try facebook.authenticate(credentials: token)
-    
     do {
+        guard let state = request.cookies["oauth_csrf"] else { throw IncorrectCredentialsError() }
+        let credentials = try facebook.authenticate(authorizationCodeCallbackURL: request.uri.string, state: state) as! FacebookAccount
+        
+        try request.user.login(credentials: credentials, persist: true)
+        return Response(redirect: "/")
+    }
+    catch let error as IncorrectCredentialsError {
+        return try drop.view("login.mustache", context: ["flash": "Incorrect username or password"])
+    }
+}
+
+drop.get("/login/google/authorize") { request in
+    let state = String(URandom().uint64)
+    let response = Response(redirect: google.getLoginLink(redirectURL: "http://localhost:8080/login/google/callback", state: state))
+    response.cookies["oauth_csrf"] = state
+    return response
+}
+
+drop.get("/login/google/callback") { request in
+    do {
+        guard let state = request.cookies["oauth_csrf"] else { throw IncorrectCredentialsError() }
+        let credentials = try google.authenticate(authorizationCodeCallbackURL: request.uri.string, state: state) as! GoogleAccount
+        
         try request.user.login(credentials: credentials, persist: true)
         return Response(redirect: "/")
     }
