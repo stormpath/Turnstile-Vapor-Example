@@ -77,7 +77,7 @@ drop.post("register") { request in
  */
 let protect = ProtectMiddleware(error: Abort.custom(status: .unauthorized, message: "Unauthorized"))
 
-drop.grouped(APIAuthenticationMiddleware(), protect).group("api") { api in
+drop.grouped(BasicAuthenticationMiddleware(), protect).group("api") { api in
     api.get("me") { request in
         return try JSON(node: request.user().makeNode())
     }

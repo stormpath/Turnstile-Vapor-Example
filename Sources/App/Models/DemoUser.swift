@@ -14,9 +14,10 @@ import TurnstileWeb
 import Auth
 
 final class DemoUser: User {
+    // Field for the Fluent ORM
     var exists: Bool = false
     
-    // Fields
+    // Database Fields
     var id: Node?
     var username: String
     var password = ""
@@ -25,10 +26,16 @@ final class DemoUser: User {
     var apiKeyID = URandom().secureToken
     var apiKeySecret = URandom().secureToken
     
+    /**
+     Authenticates a set of credentials against the User.
+     */
     static func authenticate(credentials: Credentials) throws -> User {
         var user: DemoUser?
         
         switch credentials {
+        /**
+         Fetches a user, and checks that the password is present, and matches.
+         */
         case let credentials as UsernamePassword:
             let fetchedUser = try DemoUser.query()
                 .filter("username", credentials.username)
@@ -39,9 +46,15 @@ final class DemoUser: User {
                 user = fetchedUser
             }
             
+        /**
+         Fetches the user by session ID. Used by the Vapor session manager.
+         */
         case let credentials as Identifier:
             user = try DemoUser.find(credentials.id)
-            
+        
+        /**
+         Fetches the user by Facebook ID. If the user doesn't exist, autoregisters it.
+         */
         case let credentials as FacebookAccount:
             if let existing = try DemoUser.query().filter("facebook_id", credentials.uniqueID).first() {
                 user = existing
@@ -49,13 +62,19 @@ final class DemoUser: User {
                 user = try DemoUser.register(credentials: credentials) as? DemoUser
             }
         
+        /**
+         Fetches the user by Google ID. If the user doesn't exist, autoregisters it.
+         */
         case let credentials as GoogleAccount:
             if let existing = try DemoUser.query().filter("google_id", credentials.uniqueID).first() {
                 user = existing
             } else {
                 user = try DemoUser.register(credentials: credentials) as? DemoUser
             }
-            
+        
+        /**
+         Authenticates via API Keys
+         */
         case let credentials as APIKey:
             user = try DemoUser.query()
                 .filter("api_key_id", credentials.id)
@@ -73,6 +92,9 @@ final class DemoUser: User {
         }
     }
     
+    /**
+     Registers users for UsernamePassword, Facebook, or Google accounts.
+     */
     static func register(credentials: Credentials) throws -> User {
         var newUser: DemoUser
         
@@ -111,6 +133,9 @@ final class DemoUser: User {
         self.googleID = credentials.uniqueID
     }
     
+    /**
+     Initializer for Fluent
+     */
     init(node: Node, in context: Context) throws {
         id = node["id"]
         username = try node.extract("username")
@@ -121,6 +146,9 @@ final class DemoUser: User {
         apiKeySecret = try node.extract("api_key_secret")
     }
     
+    /**
+     Serializer for Fluent
+     */
     func makeNode(context: Context) throws -> Node {
         return try Node(node: [
             "id": id,
