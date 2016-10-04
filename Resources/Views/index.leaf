@@ -1,0 +1,22 @@
+#extend("base")
+
+#export("body") {
+  #if(authenticated) {
+    <h1>Hi #(account.username)!</h1>
+    <p>Thanks for trying out this Turnstile demo! Turnstile is the easiest way to set up authentication with Vapor. </p>
+    <p>We've generated a set of API Keys for you, which you can use to grab your full profile data via Basic Authentication to <a href="/me"><code>/api/me</code></a>. Your API Key ID is: <code>#(account.api_key_id)</code>, and secret is: <code>#(account.api_key_secret)</code>.</p>
+    <p>You can use curl to test the API endpoint: </p>
+    <p><pre>curl -u #(account.api_key_id):#(account.api_key_secret) #(baseURL)/api/me</pre></p>
+  }
+  ##else() {
+    <h1>Hi! Sign up today!</h1>
+  }
+
+  <h1>Learn More about Turnstile</h1>
+
+  <ul>
+  <li><a href="https://github.com/stormpath/Turnstile">Turnstile on GitHub</a></li>
+  <li><a href="https://github.com/vapor/vapor/tree/master/Sources/Auth/Authentication">Turnstile's Vapor Integration</a></li>
+  <li><a href="https://github.com/edjiang/VaporAuth">This demo app's code on GitHub</a></li>
+  </ul>
+}
