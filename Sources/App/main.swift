@@ -11,7 +11,7 @@ import Foundation
 let auth = AuthMiddleware<DemoUser>()
 let database = Database(MemoryDriver())
 
-let drop = Droplet(database: database, availableMiddleware: ["auth": auth], preparations: [DemoUser.self])
+let drop = Droplet(database: database, availableMiddleware: ["auth": auth, "trustProxy": TrustProxyMiddleware()], preparations: [DemoUser.self])
 
 /**
  Endpoint for the home page.
