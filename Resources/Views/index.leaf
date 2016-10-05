@@ -12,7 +12,7 @@
     <h1>Hi! Sign up today!</h1>
   }
 
-  <h1>Learn More about Turnstile</h1>
+  <p>Learn More about Turnstile</p>
 
   <ul>
   <li><a href="https://github.com/stormpath/Turnstile">Turnstile on GitHub</a></li>
