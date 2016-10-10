@@ -4,6 +4,20 @@ body {
   padding-bottom: 20px;
 }
 
+/* Custom page header */
+.header {
+  padding-right: 15px;
+  padding-left: 15px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #e5e5e5;
+}
+/* Make the masthead heading the same height as the navigation */
+.header h3 {
+  margin-top: 0;
+  margin-bottom: 0;
+  line-height: 40px;
+}
+
 /* Customize container */
 @media (min-width: 768px) {
   .container {
@@ -12,4 +26,15 @@ body {
 }
 .container-narrow > hr {
   margin: 30px 0;
+}
+
+/* Responsive: Portrait tablets and up */
+@media screen and (min-width: 768px) {
+  /* Remove the padding we set earlier */
+  /* Space out the masthead */
+  .header {
+    padding-right: 0;
+    padding-left: 0;
+    margin-bottom: 30px;
+  }
 }
