@@ -8,10 +8,11 @@ import TurnstileWeb
 import Fluent
 import Foundation
 
-let auth = AuthMiddleware<DemoUser>()
-let database = Database(MemoryDriver())
-
-let drop = Droplet(database: database, availableMiddleware: ["auth": auth, "trustProxy": TrustProxyMiddleware()], preparations: [DemoUser.self])
+let drop = Droplet()
+drop.database = Database(MemoryDriver())
+drop.middleware.append(AuthMiddleware(user: DemoUser.self))
+drop.middleware.append(TrustProxyMiddleware())
+drop.preparations.append(DemoUser.self)
 
 /**
  Endpoint for the home page.
